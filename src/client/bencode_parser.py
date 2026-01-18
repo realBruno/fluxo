@@ -1,56 +1,90 @@
+from copy import deepcopy
 from stack import Stack
-
-
 
 class BencodeParser:
     stack = Stack()
     main_dictionary = {}
+    template_list = []
     is_key = True # checks if entry is key or value in dictionary
     key = ""
-    FINAL_STRUCTURE = []
     MAX_PRINTABLE = 127  # maximum possible decimal value for a printable char in the ASCII table
-    MAX_INDEX = 0 # stores length of bencode string
 
     @staticmethod
-    def byte_string(file_content : str, index : int):
+    def byte_string(file_content : str, index : int) -> list:
+        print("Byte string")
         length = ""
         while (char := file_content[index]).isnumeric():
             length += char
+            print("length:", length)
             index += 1
-
+        index += 1 # skips :
+        print("INDEX:", index)
         length = int(length)
 
-        index += 1 # skips ':'
-
         string = ""
-        while length > 0:
+        for i in range(length):
             string += file_content[index]
-            length -= 1
+            #print(string, index)
             index += 1
+        #print("index bytestring", file_content[index])
         return [string, index]
 
     @staticmethod
-    def integer(file_content : str, index : int):
+    def integer(file_content : str, index : int) -> list:
+        print("Integer")
         index += 1
         integer = ""
-        while (char := file_content[index]).isnumeric():
+        while (char := file_content[index]) != 'e':
             integer += char
             index += 1
+        index += 1 # skips 'e'
         return [int(integer), index]
 
     @staticmethod
-    def structure(file_content : str, index : int):
-        match file_content[index]:
-            case 'd', 'l':
-                index += 1
-                return BencodeParser.structure(file_content, index)
-            case 'i':
-                return BencodeParser.integer(file_content, index)
-            case '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9':
-                return BencodeParser.byte_string(file_content, index)
+    def decider(file_content : str, index : int):
+        print("Decider", file_content[index], index)
+        if file_content[index] == 'd':
+            index += 1
+
+            key = BencodeParser.decider(file_content, index)
+            index = key[1]
+
+            value = BencodeParser.decider(file_content, index)
+            index = value[1]
+
+            return_value = {
+                key[0] : value[0]
+            }
+
+            return [return_value, index]
+
+        elif file_content[index] == 'l':
+            index += 1
+
+            while file_content[index] != 'e':
+                return_value = BencodeParser.decider(file_content, index)
+                index = return_value[1]
+                BencodeParser.template_list.append(return_value[0])
+            index += 1
+
+            aux = deepcopy(BencodeParser.template_list)
+            BencodeParser.template_list.clear()
+
+            return [aux, index] # -> [[], i]
+
+        elif file_content[index] == 'i':
+            returned_value = BencodeParser.integer(file_content, index) # -> [integer, i]
+            index = returned_value[1]
+            return returned_value
+
+        elif file_content[index].isnumeric():
+            returned_value = BencodeParser.byte_string(file_content, index) # -> ["bencode", i]
+            index = returned_value[1]
+            return returned_value
+        return []
 
     @staticmethod
-    def decode(filename):
+    def decode(filename : str) -> dict:
         with open(filename, "rb") as file: # test_file.torrent
             file_content = ""
 
@@ -58,33 +92,23 @@ class BencodeParser:
                 if line > BencodeParser.MAX_PRINTABLE:
                     break
                 file_content += chr(line)
-                BencodeParser.MAX_INDEX += 1
+
+            if file_content[0] != 'd':
+                raise TypeError("Not a torrent file.")
 
             index = 1
-            BencodeParser.stack.push(file_content[0])
-
-            while BencodeParser.stack.peek(): # peek method returns None if empty
-                match BencodeParser.stack.peek():
-                    case 'd': # dictionary
-                        returned_value = BencodeParser.structure(file_content, index)
-                        if BencodeParser.is_key:
-                            BencodeParser.key = returned_value[0]
-                            BencodeParser.is_key = False
-                        else:
-                            BencodeParser.is_key = True
-                            BencodeParser.main_dictionary[BencodeParser.key] = returned_value[0]
-                    case 'l': # list
-                        BencodeParser.structure(file_content, index)
-                    case 'i': # integer
-                        BencodeParser.integer(file_content, index)
-                    case '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9': # byte string
-                        returned_value = BencodeParser.byte_string(file_content, index)
-                        index = returned_value[1] + 1
-
-                if file_content[index] == 'e':
-                    BencodeParser.stack.pop()
+            while file_content[index] != 'e':
+                returned_value = BencodeParser.decider(file_content, index)
+                print(returned_value)
+                if BencodeParser.is_key:
+                    BencodeParser.key = returned_value[0]
+                    BencodeParser.is_key = False
                 else:
-                    BencodeParser.stack.push(file_content[index])
+                    BencodeParser.is_key = True
+                    BencodeParser.main_dictionary[BencodeParser.key] = returned_value[0]
 
+                index = int(returned_value[1]) + 1
+
+        return BencodeParser.main_dictionary
 
 BencodeParser.decode(input())
