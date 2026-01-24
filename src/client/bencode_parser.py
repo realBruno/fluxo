@@ -18,7 +18,7 @@ class BencodeParser:
         to_hex = False
         for i in range(length):
             string += file_content[index]
-            if ord(file_content[index]) > 127:
+            if ord(file_content[index]) > BencodeParser.MAX_PRINTABLE:
                 to_hex = True
             index += 1
 
