@@ -1,9 +1,9 @@
-def iterate(contents: str, index, caller='b'):
+def iterate(contents: bytes, index, caller='b'):
     if caller == 'i':
         index += 1
-    number = ''
-    while contents[index].isdigit():
-        number += contents[index]
+    number = bytearray()
+    while 48 <= contents[index] <= 57:
+        number.append(contents[index])
         index += 1
     number = int(number)
     return number, index + 1
@@ -16,31 +16,31 @@ def read(path: str):
     except (OSError, UnicodeDecodeError) as e:
         raise ValueError("File invalid or inaccessible") from e
 
-def parse(contents: str, index: int):
+def parse(contents: bytes, index: int):
     try:
-        if contents[index] == 'd':
+        if contents[index] == ord('d'):
             index += 1
             d = dict()
-            while contents[index] != 'e':
+            while contents[index] != ord('e'):
                 key = parse(contents, index)
                 value = parse(contents, key[1])
                 d[key[0]] = value[0]
                 index = value[1]
             return d, index + 1
 
-        elif contents[index] == 'l':
+        elif contents[index] == ord('l'):
             index += 1
             l = list()
-            while contents[index] != 'e':
+            while contents[index] != ord('e'):
                 value = parse(contents, index)
                 l.append(value[0])
                 index = value[1]
             return l, index + 1
 
-        elif contents[index] == 'i':
+        elif contents[index] == ord('i'):
             return iterate(contents, index, 'i')
 
-        elif contents[index].isdigit():
+        elif 48 <= contents[index] <= 57:
             length, index = iterate(contents, index)
             string = contents[index: index + length]
             return string, index + length
@@ -49,6 +49,6 @@ def parse(contents: str, index: int):
         raise ValueError("Invalid torrent file") from e
 
 def decode(path: str):
-    contents = read(path).decode("latin-1")
+    contents = read(path)
     decoded = parse(contents, 0)[0]
     return decoded
