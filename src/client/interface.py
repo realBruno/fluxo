@@ -1,17 +1,22 @@
 import sys
-from client.bencode import decode
 
-def interface():
+from client import request
+
+def show_progress():
+    ...
+
+def get_path():
     if len(sys.argv) == 2:
         path = sys.argv[1]
-        parsed = decode(path)
     elif len(sys.argv) == 1:
         path = input()
-        parsed = decode(path)
     else:
         raise TypeError(f"Takes exactly 1 argument. {len(sys.argv) - 1} given.")
 
-    return parsed
+    make_request(path)
 
-if __name__ == '__main__':
-    ...
+def make_request(path: str):
+    decoded, hashed = request.get_file_info(path)
+    request.torrent(decoded, hashed)
+
+# get_path()
