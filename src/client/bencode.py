@@ -42,8 +42,13 @@ class Bencode:
             elif contents[index] == 'i':
                 return cls.iterator(contents, index, 'i')
             elif contents[index].isdigit():
+                hex = False
                 length, index = cls.iterator(contents, index)
                 string = contents[index: index + length]
+                for char in string:
+                    if ord(char) > 127: hex = True
+                if hex:
+                    string = ' '.join(f'{b:02x}' for b in string.encode("latin-1"))
                 return string, index + length
         except Exception as e:
             raise ValueError("Invalid torrent file") from e
