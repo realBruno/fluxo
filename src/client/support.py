@@ -1,14 +1,12 @@
-""" Auxiliary functions for both single and multiple file modes"""
 import hashlib
 import random
 import binascii
 
-from client.bencode.decoder import decode
-from client.bencode.encoder import encode
+from client import bencode
 
 def get_file_info(path: str) -> tuple[dict, str, int]:
-    decoded = decode(path)
-    info_hash = hashlib.sha1(encode(decoded[b"info"])).digest().hex()
+    decoded = bencode.decode(path)
+    info_hash = hashlib.sha1(bencode.encode(decoded[b"info"])).digest().hex()
     single_file = b"files" not in decoded[b"info"]
 
     return decoded, info_hash, single_file
