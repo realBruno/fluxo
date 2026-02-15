@@ -1,8 +1,9 @@
-# ENCODE FUNCTIONS
-def decode(path: str):
-    contents = read(path)
+# DECODE FUNCTIONS
+def decode(path: str | bytes):
+    contents = read(path) if type(path) is str else path
     decoded = parse(contents, 0)[0]
     return decoded
+
 
 def iterate(contents: bytes, index, caller='b'):
     if caller == 'i':
@@ -14,6 +15,7 @@ def iterate(contents: bytes, index, caller='b'):
     number = int(number)
     return number, index + 1
 
+
 def read(path: str):
     path = path.replace('\"', '')
     try:
@@ -21,6 +23,7 @@ def read(path: str):
             return file.read()
     except (OSError, UnicodeDecodeError) as e:
         raise ValueError("File invalid or inaccessible") from e
+
 
 def parse(contents: bytes, index: int):
     try:
@@ -50,7 +53,8 @@ def parse(contents: bytes, index: int):
     except Exception as e:
         raise ValueError("Invalid torrent file") from e
 
-# DECODE FUNCTIONS
+
+# ENCODE FUNCTIONS
 def encode(parsed: dict):
     if type(parsed) != dict:
         raise ValueError("Data is not a dictionary")
@@ -60,6 +64,7 @@ def encode(parsed: dict):
         bencoded += data(v)
     bencoded += b'e'
     return bencoded
+
 
 def data(v: list | dict | bytes | int):
     content = b''
