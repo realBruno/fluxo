@@ -5,31 +5,35 @@
 """
 import sys
 
-from client import bencode, modes, peer, support
+from client import modes, peer
+
 
 def make_request(path: str):
-    print("Parsing metadata...", end = '')
-    decoded, info_hash, is_single = support.get_file_info(path)
+    print("Parsing metadata...")
+    decoded, info_hash, is_single = modes.get_file_info(path)
     announce = decoded[b"announce"]
     if is_single:
-        print("\rBuilding payload...", end = '')
+        print("Building payload...")
         payload = modes.single_torrent(decoded, info_hash)
-        print("\rSubmitting request...", end = '')
+        print("Submitting request...")
         response = modes.submit(announce, payload)
-        print("\rRequest successful!", end = '')
-        response = bencode.parse(response, 0)[0]
-        print("\rStarting handshake with peers...", end = '')
-        peer.handshake(response)
+        print("Request was successful!")
+        print("Starting contact with peers...")
+        info_hash = payload["info_hash"]
+        peer_id = payload["peer_id"]
+        peer.contact_peer(response, info_hash, peer_id)
     else:
         raise TypeError("Multi-file mode is under development")
 
+
 def get_path():
     if len(sys.argv) == 2:
-        path = sys.argv[1]
+        return sys.argv[1]
     elif len(sys.argv) == 1:
-        path = input("Path to file: ")
+        return input("Path to file: ")
     else:
         raise TypeError(f"Takes exactly 1 argument. {len(sys.argv) - 1} given.")
-    make_request(path)
 
-get_path()
+
+file_loc = get_path()
+make_request(file_loc)
