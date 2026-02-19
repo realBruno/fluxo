@@ -280,11 +280,6 @@ Shared state ensures:
 
 MIT License - See LICENSE file for details
 
-## Author
-
-Bruno Fernandes  
-[GitHub](https://github.com/realBruno) | [LinkedIn](https://linkedin.com/in/your-profile)
-
 ---
 
 **Note**: This is a learning project. For production use, consider established clients like qBittorrent, Transmission, or Deluge.
