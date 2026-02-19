@@ -32,7 +32,6 @@ async def close_writer(writer: asyncio.StreamWriter):
 
 
 async def handle_peer(endpoint, handshake, download, semaphore):
-
     ip, port = endpoint
     writer = None
     keep_alive_task = None
@@ -53,6 +52,9 @@ async def handle_peer(endpoint, handshake, download, semaphore):
             if peer_handshake is None: raise # drops connection with peer
 
             while True:
+                if np.all(download.downloaded):
+                    return
+
                 length, message_id, payload = await peer_protocol.read_response()
                 if message_id is not None:
                     match message_id:
@@ -80,6 +82,8 @@ async def handle_peer(endpoint, handshake, download, semaphore):
                                 await peer_protocol.send_interested(peer)
                         case Message.piece:
                             await peer_protocol.handle_piece(peer, download, payload)
+                            # if not peer.peer_choking:
+                            #     await peer_protocol.send_request(peer, download)
                         # case Message.cancel:
                         #     await peer_protocol.handle_cancel()
                         # case Message.port:
@@ -88,11 +92,17 @@ async def handle_peer(endpoint, handshake, download, semaphore):
             print(f"{Fore.RED}ERROR:{Fore.RESET} Peer did not respond")
         except ConnectionError as c:
             print(f"{Fore.RED}ERROR:{Fore.RESET} Connection: {c}")
+        except asyncio.IncompleteReadError:
+            print(f"{Fore.RED}ERROR:{Fore.RESET} Peer closed connection")
         except Exception as e:
             print(f"{Fore.RED}ERROR:{Fore.RESET} {e}")
         finally:
             if keep_alive_task:
                 keep_alive_task.cancel()
+            async with download.lock:
+                for i in range(download.total_pieces):
+                    if download.downloading[i] and not download.downloaded[i]:
+                        download.downloading[i] = False
             await close_writer(writer)
 
 
@@ -123,3 +133,5 @@ def contact_peer(decoded, t_response: dict, tracker_payload: dict):
         f.write(b'\0')
 
     asyncio.run(handle_peers(endpoints, handshake, download))
+
+    print(f"{Fore.GREEN}Download complete{Fore.RESET}")
